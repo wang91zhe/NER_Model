@@ -11,14 +11,19 @@ NULL_TAG = 'O'
 def read_bio(file_path):
     logging.info("read BIO Tagging")
     with open(file_path, 'r', encoding='utf-8') as f:
-        lines = f.readline()
+        lines = f.readlines()
         sentence_list = []
         for line in lines:
             cur_sentence = []
             text, label = line.strip('\n').split('\t')
             if "text_a" == text and "label" == label:
                 continue
-            for txt, lab in zip(text, label):
+            if text == "" or text is None:
+                continue
+            arr_text = text.split("\002")
+            arr_label = label.split("\002")
+            for txt, lab in zip(arr_text, arr_label):
+                txt = txt.lower()
                 cur_sentence.append(TaggedToken(text=txt, tag=lab))
             sentence_list.append(cur_sentence)
 
@@ -26,8 +31,12 @@ def read_bio(file_path):
 
 def ernie_tokenize_sentence(sentence, tokenizer):
     ret = []
+    count = 0
     for words in sentence:
         sub_token_text = tokenizer(words.text)
+        logging.info("tokenizer text sub_token_text: %s"%sub_token_text)
+        if sub_token_text is None or len(sub_token_text) == 0:
+            continue
         ret.append(TaggedToken(text=sub_token_text[0], tag=words.tag))
         #load after label
         ret += [TaggedToken(text=sub_token, tag=NULL_TAG)
@@ -53,8 +62,10 @@ class ERNIETaggingDataset:
         self.ernie_tokenizer = nlp.data.BERTTokenizer(self.text_vocab, lower=not is_cased)
 
         train_sentence = [] if train_path is None else load_segment(train_path, self.ernie_tokenizer)
+        dev_sentence = [] if train_path is None else load_segment(dev_path, self.ernie_tokenizer)
+        test_sentence = [] if train_path is None else load_segment(test_path, self.ernie_tokenizer)
 
-        all_sentences = train_sentence
+        all_sentences = train_sentence + dev_sentence + test_sentence
 
         if tag_vocab is None:
             logging.info('Indexing tags...')
@@ -67,26 +78,29 @@ class ERNIETaggingDataset:
         self.null_tag_index = self.tag_vocab[NULL_TAG]
 
         self.train_inputs = [self._encode_as_input(sentence) for sentence in train_sentence]
+        self.dev_inputs = [self._encode_as_input(sentence) for sentence in dev_sentence]
+        self.test_inputs = [self._encode_as_input(sentence) for sentence in test_sentence]
 
         logging.info('tag_vocab: %s', self.tag_vocab)
 
-    def _encode_as_input(self, sentence):
+    def _encode_as_input(self, sentences):
         # check whether the given sequence can be fit into `seq_len`.
+        sentence = sentences[:self.seq_len - 2]
         assert len(sentence) <= self.seq_len - 2, \
             'the number of tokens {} should not be larger than {} - 2. offending sentence: {}' \
                 .format(len(sentence), self.seq_len, sentence)
 
-        text_token = [[self.text_vocab.cls_token]  + [token.text for token in sentence] +
-                      [self.text_vocab.sep_token]]
+        text_token = ([self.text_vocab.cls_token]  + [token.text for token in sentence] +
+                      [self.text_vocab.sep_token])
         padded_text_ids = (self.text_vocab.to_indices(text_token) +
-                           ([self.text_vocab(self.text_vocab.padding_token)]*(self.seq_len - len(text_token))))
+                           ([self.text_vocab[self.text_vocab.padding_token]]*(self.seq_len - len(text_token))))
 
         tags = [NULL_TAG] + [token.tag for token in sentence] + [NULL_TAG]
         padded_tag_ids = (self.tag_vocab.to_indices(tags) +
-                           ([self.tag_vocab(NULL_TAG)]*(self.seq_len - len(tags))))
+                           ([self.tag_vocab[NULL_TAG]]*(self.seq_len - len(tags))))
 
         assert len(text_token) == len(tags)
-        assert len(padded_text_ids) == len(text_token)
+        assert len(padded_text_ids) == len(padded_tag_ids)
         assert  len(padded_text_ids) == self.seq_len
 
         valid_length = len(text_token)
@@ -112,6 +126,12 @@ class ERNIETaggingDataset:
 
     def get_train_data_loader(self, batch_size):
         return self._get_data_loader(self.train_inputs, shuffle=True, batch_size=batch_size)
+
+    def get_dev_data_loader(self, batch_size):
+        return self._get_data_loader(self.dev_inputs, shuffle=False, batch_size=batch_size)
+
+    def get_test_data_loader(self, batch_size):
+        return self._get_data_loader(self.test_inputs, shuffle=False, batch_size=batch_size)
 
     @property
     def num_tag_types(self):

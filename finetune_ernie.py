@@ -2,9 +2,11 @@ import os
 import numpy as np
 import random
 import argparse
+import mxnet as mx
 
 from ner_utils import get_context, str2bool, get_ernie_model
 from data import ERNIETaggingDataset
+from model import ERNIETagger
 
 
 def parse_args():
@@ -35,7 +37,7 @@ def parse_args():
     # optimization parameters
     arg_parser.add_argument('--seed', type=int, default=13531,
                             help='Random number seed.')
-    arg_parser.add_argument('--seq-len', type=int, default=180,
+    arg_parser.add_argument('--seq-len', type=int, default=256,
                             help='The length of the sequence input to BERT.'
                                  ' An exception will raised if this is not large enough.')
     arg_parser.add_argument('--gpu', type=int, default=0,
@@ -58,8 +60,23 @@ def main(config):
     ernie_model, vocab = get_ernie_model(args.ernie_model, args.cased, ctx, args.dropout_prob)
 
     dataset = ERNIETaggingDataset(text_vocab=vocab, train_path=config.train_path, dev_path=config.dev_path,
-                                  test_path=config.test_path, seq_len=config.seq_len, is_cased=config.is_cased)
+                                  test_path=config.test_path, seq_len=config.seq_len, is_cased=config.cased)
     train_data_loader = dataset.get_train_data_loader(config.batch_size)
+    dev_data_loader = dataset.get_dev_data_loader(config.batch_size)
+    test_data_loader = dataset.get_test_data_loader(config.batch_size)
+
+    net = ERNIETagger(ernie_model, dataset.num_tag_type, config.dropout_prob)
+    net.tag_classifier.initialize(init=mx.init.Normal(0.02), ctx=ctx)
+    net.hybridize(static_alloc=True)
+
+    #loss
+    loss = mx.gluon.loss.SoftmaxCrossEntropyLoss()
+    loss.hybridize(static_alloc=True)
+
+
+
+
+
 
 
 
