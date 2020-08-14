@@ -1,7 +1,28 @@
 import mxnet as mx
 import gluonnlp as nlp
 import argparse
+from collections import namedtuple
+import pickle
 
+__all__ = ['get_ernie_model', 'get_context', 'dump_metadata']
+ERNIEModelMetadata = namedtuple('ERNIEModelMetadata', ['config', 'tag_vocab'])
+
+def _metadata_file_path(checkpoint_prefix):
+    """Gets the file path for meta data"""
+    return checkpoint_prefix + '_metadata.pkl'
+
+def dump_metadata(config, tag_vocab):
+    """Dumps meta-data to the configured path"""
+    metadata = ERNIEModelMetadata(config=config, tag_vocab=tag_vocab)
+    with open(_metadata_file_path(config.save_checkpoint_prefix), 'wb') as ofp:
+        pickle.dump(metadata, ofp)
+
+
+def load_metadata(checkpoint_prefix):
+    """Loads meta-data to the configured path"""
+    with open(_metadata_file_path(checkpoint_prefix), 'rb') as ifp:
+        metadata = pickle.load(ifp)
+        return metadata.config, metadata.tag_vocab
 
 def str2bool(v):
     """Utility function for parsing boolean in argparse

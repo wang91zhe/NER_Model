@@ -6,7 +6,8 @@ import mxnet as mx
 
 logging.getLogger().setLevel(logging.DEBUG)
 TaggedToken = namedtuple('TaggedToken', ['text', 'tag'])
-NULL_TAG = 'O'
+PredictedToken = namedtuple('PredictedToken', ['text', 'true_tag', 'pred_tag'])
+NULL_TAG = 'X'
 
 def read_bio(file_path):
     logging.info("read BIO Tagging")
@@ -138,4 +139,25 @@ class ERNIETaggingDataset:
         return len(self.tag_vocab)
 
 
+def convert_arrays_to_text(text_vocab, tag_vocab,
+                           np_text_ids, np_true_tags, np_pred_tags, np_valid_length):
+    predictions = []
+    for sample_index in range(np_valid_length.shape[0]):
+        sample_len = np_valid_length[sample_index]
+        entries = []
+        for i in range(1, sample_len - 1):
+            token_text = text_vocab.idx_to_token[np_text_ids[sample_index, i]]
+            true_tag = tag_vocab.idx_to_token[int(np_true_tags[sample_index, i])]
+            pred_tag = tag_vocab.idx_to_token[int(np_pred_tags[sample_index, i])]
+            # we don't need to predict on NULL tags
+            if true_tag == NULL_TAG:
+                last_entry = entries[-1]
+                entries[-1] = PredictedToken(text=last_entry.text + token_text,
+                                             true_tag=last_entry.true_tag,
+                                             pred_tag=last_entry.pred_tag)
+            else:
+                entries.append(PredictedToken(text=token_text,
+                                              true_tag=true_tag, pred_tag=pred_tag))
 
+        predictions.append(entries)
+    return predictions
