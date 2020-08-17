@@ -50,7 +50,7 @@ def parse_args():
                             help='Number (index) of GPU to run on, e.g. 0.  '
                                  'If not specified, uses CPU.')
     arg_parser.add_argument('--batch-size', type=int, default=32, help='Batch size for training')
-    arg_parser.add_argument('--num-epochs', type=int, default=4, help='Number of epochs to train')
+    arg_parser.add_argument('--num-epochs', type=int, default=20, help='Number of epochs to train')
     arg_parser.add_argument('--optimizer', type=str, default='adam',
                             help='Optimization algorithm to use')
     arg_parser.add_argument('--learning-rate', type=float, default=5e-5,
