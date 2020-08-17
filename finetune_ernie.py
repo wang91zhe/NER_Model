@@ -34,7 +34,7 @@ def parse_args():
 
     # bert options
     arg_parser.add_argument('--ernie-model', type=str, default='ernie_12_768_12',
-                            help='Name of the BERT model')
+                            help='Name of the ERNIE model')
     arg_parser.add_argument('--cased', type=str2bool, default=True,
                             help='Path to the development data file')
     arg_parser.add_argument('--dropout-prob', type=float, default=0.1,
