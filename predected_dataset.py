@@ -1,41 +1,34 @@
-import numpy as np
+import os
 import logging
+import numpy as np
 from collections import namedtuple
-import gluonnlp as nlp
 import mxnet as mx
+import gluonnlp as nlp
 
 logging.getLogger().setLevel(logging.DEBUG)
+
 TaggedToken = namedtuple('TaggedToken', ['text', 'tag'])
 PredictedToken = namedtuple('PredictedToken', ['text', 'true_tag', 'pred_tag'])
 NULL_TAG = 'X'
 
-def read_bio(file_path):
-    logging.info("read BIO Tagging")
-    with open(file_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-        sentence_list = []
-        for line in lines:
-            cur_sentence = []
-            text, label = line.strip('\n').split('\t')
-            if "text_a" == text and "label" == label:
-                continue
-            if text == "" or text is None:
-                continue
-            arr_text = text.split("\002")
-            arr_label = label.split("\002")
-            for txt, lab in zip(arr_text, arr_label):
-                txt = txt.lower()
-                cur_sentence.append(TaggedToken(text=txt, tag=lab))
-            sentence_list.append(cur_sentence)
+def read_bio(scentence):
+    sentence_list = []
+    cur_sentence = []
+    text, label = scentence.strip('\n').split('\t')
+    arr_text = text.split("\002")
+    arr_label = label.split("\002")
+    for txt, lab in zip(arr_text, arr_label):
+        txt = txt.lower()
+        cur_sentence.append(TaggedToken(text=txt, tag=lab))
+    sentence_list.append(cur_sentence)
+    return sentence_list
 
-        return sentence_list
 
 def ernie_tokenize_sentence(sentence, tokenizer):
     ret = []
     count = 0
     for words in sentence:
         sub_token_text = tokenizer(words.text)
-        # logging.info("tokenizer text sub_token_text: %s"%sub_token_text)
         if sub_token_text is None or len(sub_token_text) == 0:
             continue
         ret.append(TaggedToken(text=sub_token_text[0], tag=words.tag))
@@ -44,30 +37,23 @@ def ernie_tokenize_sentence(sentence, tokenizer):
                 for sub_token in sub_token_text[1:]]
     return ret
 
-def load_segment(file_path, ernie_tokenizer):
-    logging.info("load scentence in %s", file_path)
-    sentence_list = read_bio(file_path)
+def load_segment(scentences, ernie_tokenizer):
+    sentence_list = read_bio(scentences)
     subword_sentences = [ernie_tokenize_sentence(sentence, ernie_tokenizer)
                          for sentence in sentence_list]
-    logging.info('load %s, its max seq len: %d',
-                 file_path, max(len(sentence) for sentence in subword_sentences))
+    logging.info('its max seq len: %d',
+                 max(len(sentence) for sentence in subword_sentences))
     return subword_sentences
 
-
-class ERNIETaggingDataset:
-    def __init__(self, text_vocab, train_path, dev_path, test_path, seq_len, is_cased,
-                 tag_list, tag_vocab=None):
+class ERNIETaggingPredectedDataset:
+    def __init__(self, text_vocab, scentences, seq_len, is_cased, tag_list, tag_vocab=None):
         self.text_vocab = text_vocab
         self.seq_len = seq_len
         self.tag_list = tag_list
 
         self.ernie_tokenizer = nlp.data.BERTTokenizer(self.text_vocab, lower=not is_cased)
 
-        train_sentence = [] if train_path is None else load_segment(train_path, self.ernie_tokenizer)
-        dev_sentence = [] if train_path is None else load_segment(dev_path, self.ernie_tokenizer)
-        test_sentence = [] if train_path is None else load_segment(test_path, self.ernie_tokenizer)
-
-        all_sentences = train_sentence + dev_sentence + test_sentence
+        predected_sentence = [] if scentences is None else load_segment(scentences, self.ernie_tokenizer)
 
         if tag_vocab is None:
             logging.info('Indexing tags...')
@@ -79,9 +65,7 @@ class ERNIETaggingDataset:
 
         self.null_tag_index = self.tag_vocab[NULL_TAG]
 
-        self.train_inputs = [self._encode_as_input(sentence) for sentence in train_sentence]
-        self.dev_inputs = [self._encode_as_input(sentence) for sentence in dev_sentence]
-        self.test_inputs = [self._encode_as_input(sentence) for sentence in test_sentence]
+        self.predect_inputs = [self._encode_as_input(sentence) for sentence in predected_sentence]
 
         logging.info('tag_vocab: %s', self.tag_vocab)
 
@@ -126,14 +110,8 @@ class ERNIETaggingDataset:
         return mx.gluon.data.DataLoader(inputs, batch_size=batch_size, shuffle=shuffle,
                                         last_batch='keep')
 
-    def get_train_data_loader(self, batch_size):
-        return self._get_data_loader(self.train_inputs, shuffle=True, batch_size=batch_size)
-
-    def get_dev_data_loader(self, batch_size):
-        return self._get_data_loader(self.dev_inputs, shuffle=False, batch_size=batch_size)
-
-    def get_test_data_loader(self, batch_size):
-        return self._get_data_loader(self.test_inputs, shuffle=False, batch_size=batch_size)
+    def get_predected_data_loader(self, batch_size):
+        return self._get_data_loader(self.predect_inputs, shuffle=False, batch_size=batch_size)
 
     @property
     def num_tag_types(self):
@@ -141,24 +119,19 @@ class ERNIETaggingDataset:
 
 
 def convert_arrays_to_text(text_vocab, tag_vocab,
-                           np_text_ids, np_true_tags, np_pred_tags, np_valid_length):
-    predictions = []
+                           np_text_ids, np_pred_tags, np_valid_length):
+    predect_text = ""
+    label = ""
     for sample_index in range(np_valid_length.shape[0]):
         sample_len = np_valid_length[sample_index]
-        entries = []
+
         for i in range(1, sample_len - 1):
             token_text = text_vocab.idx_to_token[np_text_ids[sample_index, i]]
-            true_tag = tag_vocab.idx_to_token[int(np_true_tags[sample_index, i])]
             pred_tag = tag_vocab.idx_to_token[int(np_pred_tags[sample_index, i])]
-            # we don't need to predict on NULL tags
-            if true_tag == NULL_TAG:
-                last_entry = entries[-1]
-                entries[-1] = PredictedToken(text=last_entry.text + token_text,
-                                             true_tag=last_entry.true_tag,
-                                             pred_tag=last_entry.pred_tag)
-            else:
-                entries.append(PredictedToken(text=token_text,
-                                              true_tag=true_tag, pred_tag=pred_tag))
 
-        predictions.append(entries)
-    return predictions
+            if pred_tag.endswith('-B') or pred_tag == 'O':
+                predect_text += token_text + u"/" + label
+            elif pred_tag.endswith('-I'):
+                predect_text += token_text
+
+    return predect_text
