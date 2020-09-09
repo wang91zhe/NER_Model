@@ -22,20 +22,20 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     # data file paths
-    arg_parser.add_argument('--train-path', type=str, default="./data/chinese_english_good_name/train.txt",
+    arg_parser.add_argument('--train-path', type=str, default="./data/english_good_name/train.txt",
                             help='Path to the training data file')
-    arg_parser.add_argument('--dev-path', type=str, default="./data/chinese_english_good_name/dev.txt",
+    arg_parser.add_argument('--dev-path', type=str, default="./data/english_good_name/dev.txt",
                             help='Path to the development data file')
-    arg_parser.add_argument('--test-path', type=str, default="./data/chinese_english_good_name/test.txt",
+    arg_parser.add_argument('--test-path', type=str, default="./data/english_good_name/test.txt",
                             help='Path to the test data file')
 
-    arg_parser.add_argument('--save-checkpoint-prefix', type=str, default="./model/chinese_english_good_name/model",
+    arg_parser.add_argument('--save-checkpoint-prefix', type=str, default="./model/english_good_name/model",
                             help='Prefix of model checkpoint file')
 
     # bert options
     arg_parser.add_argument('--ernie-model', type=str, default='bert_12_768_12',
                             help='Name of the ERNIE model')
-    arg_parser.add_argument('--cased', type=str2bool, default=True,
+    arg_parser.add_argument('--cased', type=str2bool, default=False,
                             help='Path to the development data file')
     arg_parser.add_argument('--dropout-prob', type=float, default=0.1,
                             help='Dropout probability for the last layer')
@@ -49,7 +49,7 @@ def parse_args():
     arg_parser.add_argument('--gpu', type=int, default=0,
                             help='Number (index) of GPU to run on, e.g. 0.  '
                                  'If not specified, uses CPU.')
-    arg_parser.add_argument('--batch-size', type=int, default=32, help='Batch size for training')
+    arg_parser.add_argument('--batch-size', type=int, default=16, help='Batch size for training')
     arg_parser.add_argument('--num-epochs', type=int, default=10, help='Number of epochs to train')
     arg_parser.add_argument('--optimizer', type=str, default='adam',
                             help='Optimization algorithm to use')
@@ -64,7 +64,7 @@ def main(config):
     ctx = get_context(0)
 
     ernie_model, vocab = get_ernie_model(args.ernie_model, args.cased, ctx, args.dropout_prob)
-    tag_list = ["EN-B", "EN-I", "CN-B", "CN-I", "O"]
+    tag_list = ["EN-B", "EN-I", "O"]
 
     dataset = ERNIETaggingDataset(text_vocab=vocab, train_path=config.train_path, dev_path=config.dev_path,
                                   test_path=config.test_path, seq_len=config.seq_len, is_cased=config.cased,

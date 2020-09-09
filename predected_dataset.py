@@ -128,10 +128,20 @@ def convert_arrays_to_text(text_vocab, tag_vocab,
         for i in range(1, sample_len - 1):
             token_text = text_vocab.idx_to_token[np_text_ids[sample_index, i]]
             pred_tag = tag_vocab.idx_to_token[int(np_pred_tags[sample_index, i])]
-
+            if i == 1:
+                predect_text = token_text
+                continue
             if pred_tag.endswith('-B') or pred_tag == 'O':
-                predect_text += token_text + u"/" + label
+                predect_text += u"/" + label + "\002" + token_text
+                if pred_tag == 'O':
+                    label = 'O'
             elif pred_tag.endswith('-I'):
-                predect_text += token_text
+                predect_text += " " + token_text
+                label = pred_tag.split('-')[0]
+
+    if label != "":
+        predect_text += u"/" + label
+
+
 
     return predect_text

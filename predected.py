@@ -13,13 +13,13 @@ def parse_args():
         description='Train a ERNIE-based named entity recognition model',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    arg_parser.add_argument('--save-checkpoint-prefix', type=str, default="./model/chinese_english_good_name/model_007.params",
+    arg_parser.add_argument('--save-checkpoint-prefix', type=str, default="./model/english_good_name/model_009.params",
                             help='Prefix of model checkpoint file')
 
     # bert options
-    arg_parser.add_argument('--ernie-model', type=str, default='ernie_12_768_12',
+    arg_parser.add_argument('--ernie-model', type=str, default='bert_12_768_12',
                             help='Name of the ERNIE model')
-    arg_parser.add_argument('--cased', type=str2bool, default=True,
+    arg_parser.add_argument('--cased', type=str2bool, default=False,
                             help='Path to the development data file')
     arg_parser.add_argument('--dropout-prob', type=float, default=0.1,
                             help='Dropout probability for the last layer')
@@ -69,12 +69,24 @@ def trans_data_style(sentence):
         label += "\002" + "O"
     return text + "\t" + label
 
+def trans_data(sentence):
+    text, label = "", ""
+    count = 0
+    for txt in sentence:
+        if count == 0:
+            text = txt
+            label = "O"
+            count = 1
+            continue
+        text += "\002" + txt
+        label += "\002" + "O"
+    return text + "\t" + label
 
 def predected(config):
     ctx = get_context(0)
-    origin_text = "遗产基因分析仪用底座 Basefor Heritage Genetic Analyzer 26861.37 26861.37"
+    origin_text = "梭织男式短大衣 FRP products (flat strips, hook plates)"
     sentence = trans_data_style(origin_text)
-    tag_list = ["EN-B", "EN-I", "CN-B", "CN-I", "O"]
+    tag_list = ["EN-B", "EN-I", "O"]
 
     ernie_model, vocab = get_ernie_model(args.ernie_model, args.cased, ctx, args.dropout_prob)
 
@@ -95,8 +107,23 @@ def predected(config):
         # np_true_tags = tag_ids.asnumpy()
 
         predect_text = convert_arrays_to_text(vocab, dataset.tag_vocab, np_text_ids,
-                                              np_pred_tags, np_valid_length)
-        print(predect_text)
+                                            np_pred_tags, np_valid_length)
+        words = predect_text.split("\002")
+        new_text = ""
+        for word in words:
+            if "##" in word:
+                tem_word = word.split(" ")
+                tem_text = ""
+                for w in tem_word:
+                    if "##" in w:
+                        txt = w.replace("##", "")
+                        tem_text = tem_text.rstrip() + txt + " "
+                    else:
+                        tem_text += w + " "
+                new_text += tem_text + "\002"
+            else:
+                new_text += word + "\002"
+        print(new_text)
 
     print("OK")
 

@@ -1,0 +1,16 @@
+[2020-09-03 10:21:53.936] server_conf.py [line:56] INFO [react-main-loop-logid] current config section dev
+[2020-09-03 10:22:11.367] app_server.py [line:159] INFO [react-main-loop-logid] start app listen port:8081 thread pool size:20 site root:predictor
+[2020-09-03 10:22:42.720] business_service.py [line:67] INFO [react-main-loop-logid] executor infer num 10 cost time: 0.18 sec
+[2020-09-03 10:22:42.721] app_server.py [line:97] INFO [3926] request cost:0.19 sec
+[2020-09-03 10:23:48.003] business_service.py [line:67] INFO [react-main-loop-logid] executor infer num 10 cost time: 0.11 sec
+[2020-09-03 10:23:48.004] app_server.py [line:97] INFO [6110] request cost:0.12 sec
+[2020-09-03 16:19:43.389] server_conf.py [line:56] INFO [react-main-loop-logid] current config section dev
+[2020-09-03 16:20:00.632] app_server.py [line:159] INFO [react-main-loop-logid] start app listen port:8081 thread pool size:20 site root:predictor
+[2020-09-03 16:20:09.573] business_service.py [line:67] INFO [react-main-loop-logid] executor infer num 10 cost time: 0.19 sec
+[2020-09-03 16:20:09.574] app_server.py [line:97] INFO [6110] request cost:0.19 sec
+[2020-09-03 16:21:09.906] server_conf.py [line:56] INFO [react-main-loop-logid] current config section dev
+[2020-09-03 16:21:27.051] app_server.py [line:159] INFO [react-main-loop-logid] start app listen port:8081 thread pool size:20 site root:predictor
+[2020-09-03 16:21:54.300] business_service.py [line:67] INFO [react-main-loop-logid] executor infer num 10 cost time: 0.18 sec
+[2020-09-03 16:21:54.300] app_server.py [line:97] INFO [6110] request cost:0.18 sec
+[2020-09-03 17:40:55.736] server_conf.py [line:56] INFO [react-main-loop-logid] current config section dev
+[2020-09-03 17:41:12.911] app_server.py [line:159] INFO [react-main-loop-logid] start app listen port:8081 thread pool size:20 site root:predictor
