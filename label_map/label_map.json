@@ -1,0 +1,7 @@
+{
+    "english_model": {
+        "EN-B": 0,
+        "EN-I": 1,
+        "O": 2
+    }
+}
