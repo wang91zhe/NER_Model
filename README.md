@@ -26,14 +26,14 @@ The training script for NER requires the seqeval package:
    |----model_dir\
    |----logger_file\
 
-predict_data：存放预测的文件
-save_model：模型文件
-server_ernie：启动服务，启动Server，只需启动app_server.py文件即可
-label_map：每个HSCODE对应的标签文件
-pretrained：Ernie的预训练模型文件及参数文件
-ERNIE：百度的ernie模型
-model_dir：每个HSCODE模型路径文件
-logger_file：日志文件
+predict_data：存放预测的文件 \
+save_model：模型文件 \
+server_ernie：启动服务，启动Server，只需启动app_server.py文件即可 \
+label_map：每个HSCODE对应的标签文件 \
+pretrained：Ernie的预训练模型文件及参数文件 \
+ERNIE：百度的ernie模型 \
+model_dir：每个HSCODE模型路径文件 \
+logger_file：日志文件 \
  
  
 
